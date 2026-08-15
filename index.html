@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Arrow Flow Puzzle</title>
+  <meta name="description" content="A satisfying directional arrow-removal puzzle game with 100 deterministic levels, hints, undo, sound effects, and daily challenges." />
+  
+  <!-- Web Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,500;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css" />
+  <!-- GamePix Official Advertising SDK -->
+  <script src="https://gamepix.blob.core.windows.net/gpxlib/dev/gamepix.js"></script>
+</head>
+<body>
+  <div id="app-container">
+    
+    <!-- HEADER -->
+    <header class="app-header">
+      <button id="btn-header-back" class="header-btn" aria-label="Back to home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+        <span class="brand-title">ARROW FLOW</span>
+      </div>
+
+      <div class="header-badges">
+        <div class="badge badge-coin" title="Coins balance">
+          <span>🪙</span>
+          <span id="badge-coin-val">100</span>
+        </div>
+        <div class="badge badge-level" title="Current Level">
+          <span id="badge-level-val">Lvl 1</span>
+        </div>
+        <button id="btn-header-settings" class="header-btn" aria-label="Settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- TOAST & CONFETTI -->
+    <div id="toast-container"></div>
+    <canvas id="confetti-canvas"></canvas>
+
+    <!-- SCREEN 1: HOME -->
+    <main id="screen-home" class="screen active">
+      <div class="home-hero">
+        <div class="home-logo-container">
+          <svg class="home-logo-svg" viewBox="0 0 100 100" fill="none">
+            <path d="M50 8L88 46H64V92H36V46H12L50 8Z" fill="url(#hero-grad)" stroke="rgba(255,255,255,0.4)" stroke-width="3"/>
+            <defs>
+              <linearGradient id="hero-grad" x1="0" y1="0" x2="100" y2="100">
+                <stop offset="0%" stop-color="#38bdf8" />
+                <stop offset="100%" stop-color="#6366f1" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h1 class="home-title">ARROW FLOW</h1>
+        <p class="home-subtitle">Clear the path. Master the puzzle.</p>
+      </div>
+
+      <div class="home-actions">
+        <button id="btn-home-play" class="btn-primary">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <span>PLAY GAME</span>
+        </button>
+        <button id="btn-home-levels" class="btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="2"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+          </svg>
+          <span>LEVEL SELECT</span>
+        </button>
+        <button id="btn-home-daily" class="btn-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>DAILY CHALLENGE</span>
+        </button>
+      </div>
+
+      <!-- Home Stats Summary -->
+      <div class="home-stats-summary glass">
+        <div class="stat-summary-item">
+          <p class="stat-summary-label">Level</p>
+          <p id="home-stat-level" class="stat-summary-val">1 / 100</p>
+        </div>
+        <div class="stat-summary-divider"></div>
+        <div class="stat-summary-item">
+          <p class="stat-summary-label">Stars</p>
+          <p id="home-stat-stars" class="stat-summary-val">★ 0</p>
+        </div>
+        <div class="stat-summary-divider"></div>
+        <div class="stat-summary-item">
+          <p class="stat-summary-label">Coins</p>
+          <p id="home-stat-coins" class="stat-summary-val">🪙 100</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- SCREEN 2: PLAYING -->
+    <main id="screen-playing" class="screen">
+      <div class="game-top-bar">
+        <div class="flex-stat-group">
+          <span class="stat-label">Level</span>
+          <span id="level-display" class="stat-value-italic">01</span>
+        </div>
+
+        <div class="flex-stat-group center-stats">
+          <div class="stat-box">
+            <span class="stat-label">Moves</span>
+            <span id="stat-moves" class="stat-value-sky">0</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Target</span>
+            <span id="stat-target" class="stat-value-muted">5</span>
+          </div>
+        </div>
+
+        <div class="flex-stat-group right-stats">
+          <span class="stat-label">Coins</span>
+          <span id="coins-display" class="stat-value-amber">🪙 <span id="game-coins-val">100</span></span>
+        </div>
+      </div>
+
+      <div class="board-container-wrapper">
+        <div id="puzzle-board" class="puzzle-board board-grid"></div>
+      </div>
+
+      <div class="game-controls-bar">
+        <button id="btn-undo" class="control-btn control-btn-undo glass" title="Undo last move [U]" disabled>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7v6h6"></path>
+            <path d="M21 17a9 9 0 0 0-9-13.5L3 13"></path>
+          </svg>
+          <span>UNDO <small class="kbd-badge">[U]</small></span>
+        </button>
+
+        <button id="btn-restart" class="control-btn control-btn-restart glass" title="Restart level [R]">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+          </svg>
+          <small class="kbd-badge-only">[R]</small>
+        </button>
+
+        <button id="btn-hint" class="control-btn control-btn-hint btn-hint-white" title="Get a hint [H]">
+          <span class="badge-cost">🪙 15</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.663 17h4.674"></path>
+            <path d="M10 20h4"></path>
+            <path d="M12 3a7 7 0 0 0-7 7c0 2.218 1.054 4.19 2.68 5.46L8 17h8l.32-1.54C17.946 14.19 19 12.218 19 10a7 7 0 0 0-7-7z"></path>
+          </svg>
+          <span>HINT <small class="kbd-badge">[H]</small></span>
+        </button>
+      </div>
+
+      <!-- Desktop Keyboard Shortcuts Banner -->
+      <div class="desktop-keyboard-hint glass">
+        <span>⌨️ <b>Shortcuts:</b> <kbd>U</kbd> Undo · <kbd>R</kbd> Restart · <kbd>H</kbd> Hint · <kbd>WASD / Arrows</kbd> Select Arrow · <kbd>Space / Enter</kbd> Tap</span>
+      </div>
+    </main>
+
+    <!-- SCREEN 3: LEVEL SELECT -->
+    <main id="screen-level-select" class="screen">
+      <div class="level-select-header">
+        <h2 class="level-select-title">SELECT LEVEL</h2>
+      </div>
+      <div id="levels-grid" class="levels-grid"></div>
+    </main>
+
+    <!-- MODAL: VICTORY / LEVEL COMPLETE -->
+    <div id="modal-victory" class="modal-overlay">
+      <div class="modal-card win-card-immersive">
+        <h2 class="victory-title">BRILLIANT!</h2>
+        <p id="victory-level-title" class="victory-subtitle">Level Completed</p>
+
+        <div class="victory-stars">
+          <span class="victory-star-icon">★</span>
+          <span class="victory-star-icon main-star">★</span>
+          <span class="victory-star-icon">★</span>
+        </div>
+
+        <div class="modal-stats-grid">
+          <div class="glass p-4 rounded-2xl stat-card-item">
+            <p class="modal-stat-label">Moves</p>
+            <p id="victory-moves" class="modal-stat-val">5</p>
+          </div>
+          <div class="glass p-4 rounded-2xl stat-card-item">
+            <p class="modal-stat-label">Reward</p>
+            <p id="victory-coins" class="modal-stat-val text-amber-400">+25 🪙</p>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button id="btn-next-level" class="btn-primary btn-sky-full">
+            <span>NEXT LEVEL</span>
+          </button>
+          <button id="btn-ad-bonus-coins" class="btn-secondary" style="background:rgba(245,158,11,0.18); border-color:rgba(245,158,11,0.4); color:var(--accent-amber); font-weight:800;" title="Watch short ad to earn bonus coins">
+            <span>🎬 WATCH AD (+30 🪙)</span>
+          </button>
+          <div style="display:flex; gap:10px; width:100%;">
+            <button id="btn-replay-level" class="btn-secondary" style="flex:1;">REPLAY LEVEL</button>
+            <button id="btn-victory-levels" class="btn-secondary" style="flex:1;">LEVELS</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: SETTINGS -->
+    <div id="modal-settings" class="modal-overlay">
+      <div class="modal-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <h2 style="font-size:1.4rem; font-weight:800; font-style:italic;" class="text-sky-400">SETTINGS</h2>
+          <button class="btn-close-modal header-btn" aria-label="Close settings">✕</button>
+        </div>
+
+        <div class="settings-list">
+          <div class="setting-item">
+            <span>Sound Effects</span>
+            <label class="switch">
+              <input type="checkbox" id="setting-sound" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <span>Background Music</span>
+            <label class="switch">
+              <input type="checkbox" id="setting-music" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-item">
+            <span>Vibration Feedback</span>
+            <label class="switch">
+              <input type="checkbox" id="setting-vibration" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="how-to-play-box glass">
+          <strong style="color:var(--text-primary); display:block; margin-bottom:6px;">How to Play:</strong>
+          • Tap an arrow pointing to a clear edge to remove it.<br>
+          • Arrows move straight out in their facing direction.<br>
+          • If another arrow blocks the line, it cannot move.<br>
+          • Clear all arrows to win!
+        </div>
+
+        <button id="btn-reset-progress" class="btn-danger-reset">
+          RESET ALL PROGRESS
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL: CUSTOM CONFIRM -->
+    <div id="modal-confirm" class="modal-overlay">
+      <div class="modal-card" style="text-align: center; max-width: 360px;">
+        <div style="font-size: 2.5rem; margin-bottom: 8px;">⚠️</div>
+        <h2 id="modal-confirm-title" style="font-size: 1.3rem; font-weight: 800; color: #f87171; margin-bottom: 8px;">Reset All Progress?</h2>
+        <p id="modal-confirm-message" style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px; line-height:1.5;">
+          This will erase all your unlocked levels, stars, and coins. This action cannot be undone!
+        </p>
+        <div style="display: flex; gap: 10px; width: 100%;">
+          <button id="modal-confirm-cancel" class="btn-secondary" style="flex: 1;">Cancel</button>
+          <button id="modal-confirm-ok" class="btn-primary" style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626); border-color: #ef4444;">Reset</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="levels.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+
