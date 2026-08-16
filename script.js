@@ -216,171 +216,6 @@
     }
   }
 
-  // ==================== GAMEPIX ADVERTISING MANAGER ====================
-  const adManager = {
-    isSDKAvailable: false,
-    lastInterstitialTime: 0,
-    interstitialCooldownMs: 120000, // 2-minute cooldown between interstitials
-    levelCompletionCount: 0,
-    isAdShowing: false,
-
-    initializeAds() {
-      if (typeof window.GamePix !== 'undefined') {
-        this.isSDKAvailable = true;
-        console.log("[GamePix SDK] Initialized successfully.");
-
-        try {
-          if (window.GamePix.on) {
-            window.GamePix.on.pause = () => this.handlePause();
-            window.GamePix.on.resume = () => this.handleResume();
-          }
-        } catch (e) {
-          console.warn("[GamePix SDK] Pause/Resume binding warning:", e);
-        }
-
-        this.notifyGameLoaded();
-      } else {
-        this.isSDKAvailable = false;
-        console.log("[GamePix SDK] Not available (Local development mode). Ads safely skipped.");
-      }
-    },
-
-    gamepixSDKAvailable() {
-      return this.isSDKAvailable && typeof window.GamePix !== 'undefined';
-    },
-
-    canShowInterstitial() {
-      if (!this.gamepixSDKAvailable()) return false;
-      if (this.isAdShowing) return false;
-      const now = Date.now();
-      if (now - this.lastInterstitialTime < this.interstitialCooldownMs) {
-        return false;
-      }
-      return true;
-    },
-
-    handlePause() {
-      if (audioCtx && audioCtx.state === 'running') {
-        try { audioCtx.suspend(); } catch (e) {}
-      }
-    },
-
-    handleResume() {
-      if (audioCtx && audioCtx.state === 'suspended' && STATE.settings.sound) {
-        try { audioCtx.resume(); } catch (e) {}
-      }
-    },
-
-    notifyGameLoaded() {
-      if (!this.gamepixSDKAvailable()) return;
-      try {
-        if (typeof window.GamePix.gameLoaded === 'function') {
-          window.GamePix.gameLoaded();
-        } else if (window.GamePix.game && typeof window.GamePix.game.gameLoaded === 'function') {
-          window.GamePix.game.gameLoaded();
-        }
-      } catch (e) {
-        console.warn("[GamePix SDK] notifyGameLoaded warning:", e);
-      }
-    },
-
-    notifyLevelComplete(levelNum) {
-      if (!this.gamepixSDKAvailable()) return;
-      try {
-        if (typeof window.GamePix.updateLevel === 'function') {
-          window.GamePix.updateLevel(levelNum);
-        } else if (typeof window.GamePix.updateScore === 'function') {
-          window.GamePix.updateScore(levelNum);
-        }
-      } catch (e) {
-        console.warn("[GamePix SDK] notifyLevelComplete warning:", e);
-      }
-    },
-
-    async showInterstitialAd(onComplete) {
-      const done = () => {
-        this.isAdShowing = false;
-        this.handleResume();
-        if (typeof onComplete === 'function') onComplete();
-      };
-
-      if (!this.canShowInterstitial()) {
-        done();
-        return;
-      }
-
-      this.isAdShowing = true;
-      this.lastInterstitialTime = Date.now();
-      this.handlePause();
-
-      try {
-        const gpx = window.GamePix;
-        if (typeof gpx.interstitial === 'function') {
-          await gpx.interstitial();
-        } else if (typeof gpx.interstitialAd === 'function') {
-          await gpx.interstitialAd();
-        }
-        done();
-      } catch (e) {
-        this.handleAdError("Interstitial error", e);
-        done();
-      }
-    },
-
-    async showRewardedAd(onReward, onError) {
-      if (!this.gamepixSDKAvailable()) {
-        showToast("Ads unavailable in local preview mode.", "ℹ️");
-        if (typeof onError === 'function') onError("SDK unavailable");
-        return;
-      }
-
-      if (this.isAdShowing) {
-        showToast("An advertisement is currently loading.", "⏳");
-        return;
-      }
-
-      this.isAdShowing = true;
-      this.handlePause();
-
-      try {
-        const gpx = window.GamePix;
-        let rewarded = false;
-
-        if (typeof gpx.reward === 'function') {
-          const res = await gpx.reward();
-          if (res && (res.success || res.rewarded || res === true)) {
-            rewarded = true;
-          }
-        } else if (typeof gpx.rewardAd === 'function') {
-          const res = await gpx.rewardAd();
-          if (res && (res.success || res.rewarded || res === true)) {
-            rewarded = true;
-          }
-        }
-
-        this.isAdShowing = false;
-        this.handleResume();
-
-        if (rewarded) {
-          if (typeof onReward === 'function') onReward();
-        } else {
-          showToast("Ad ended early. Reward not granted.", "⚠️");
-        }
-      } catch (e) {
-        this.isAdShowing = false;
-        this.handleResume();
-        this.handleAdError("Rewarded ad error", e);
-        if (typeof onError === 'function') onError(e);
-      }
-    },
-
-    handleAdError(context, err) {
-      console.warn(`[GamePix SDK Error] ${context}:`, err);
-      this.isAdShowing = false;
-      this.handleResume();
-    }
-  };
-
   // ==================== UI STATE MANAGEMENT ====================
   function setScreen(screenName) {
     STATE.screen = screenName;
@@ -731,26 +566,7 @@
     const HINT_COST = 15;
     if (STATE.coins < HINT_COST) {
       playSound('blocked');
-      if (adManager.gamepixSDKAvailable()) {
-        showCustomConfirm({
-          title: 'Out of Coins!',
-          message: 'Watch a short video advertisement to earn 1 Free Hint?',
-          confirmText: 'Watch Ad',
-          cancelText: 'Cancel'
-        }).then((watchAd) => {
-          if (watchAd) {
-            adManager.showRewardedAd(() => {
-              STATE.coins += HINT_COST;
-              saveProgress();
-              updateHeaderUI();
-              showToast('1 Free Hint earned!', '🎁');
-              executeHint();
-            });
-          }
-        });
-      } else {
-        showToast(`Need ${HINT_COST} coins for a hint! Clear levels to earn coins.`, '🪙');
-      }
+      showToast(`Need ${HINT_COST} coins for a hint! Clear levels to earn coins.`, '🪙');
       return;
     }
 
@@ -783,10 +599,6 @@
   function handleLevelComplete() {
     playSound('victory');
     triggerConfetti();
-
-    // Signal level complete to GamePix SDK analytics
-    adManager.notifyLevelComplete(STATE.currentLevelNum);
-    adManager.levelCompletionCount++;
 
     // Calculate Star Rating
     const target = STATE.activeLevelData.targetMoves;
@@ -826,19 +638,9 @@
     saveProgress();
     updateHeaderUI();
 
-    // Render Victory Modal & handle interstitial ad rules
+    // Render Victory Modal
     setTimeout(() => {
-      const adBtn = document.getElementById('btn-ad-bonus-coins');
-      if (adBtn) {
-        adBtn.style.display = 'inline-flex';
-      }
-
       showVictoryModal(stars, coinsEarned);
-
-      // Show interstitial ad after completing every 3 levels (if cooldown met)
-      if (adManager.levelCompletionCount % 3 === 0 && adManager.canShowInterstitial()) {
-        adManager.showInterstitialAd();
-      }
     }, 450);
   }
 
@@ -1222,7 +1024,6 @@
     loadProgress();
     bindSettingsUI();
     bindKeyboardEvents();
-    adManager.initializeAds();
 
     // Global click listener to unlock Web Audio context on mobile
     window.addEventListener('pointerdown', () => {
@@ -1296,19 +1097,6 @@
       playSound('click');
       hideVictoryModal();
       setScreen('LEVEL_SELECT');
-    });
-
-    document.getElementById('btn-ad-bonus-coins')?.addEventListener('click', () => {
-      playSound('click');
-      adManager.showRewardedAd(() => {
-        STATE.coins += 30;
-        saveProgress();
-        updateHeaderUI();
-        playSound('victory');
-        showToast('Reward granted: +30 coins! 🪙', '🎉');
-        const btn = document.getElementById('btn-ad-bonus-coins');
-        if (btn) btn.style.display = 'none';
-      });
     });
 
     // Close buttons for modals
