@@ -9,9 +9,8 @@
 
   // ==================== GLOBAL GAME STATE ====================
   const STATE = {
-    screen: 'HOME', // HOME, LEVEL_SELECT, PLAYING, LEVEL_COMPLETE, SETTINGS, DAILY_CHALLENGE
+    screen: 'HOME', // HOME, LEVEL_SELECT, PLAYING, SETTINGS
     currentLevelNum: 1,
-    isDaily: false,
     activeLevelData: null,
     activeArrows: [], // Array of current active arrow objects
     undoStack: [], // Array of previous activeArrows states
@@ -21,7 +20,6 @@
     unlockedLevel: 1,
     levelStars: {}, // { levelNum: stars }
     levelBestMoves: {}, // { levelNum: bestMoves }
-    dailyCompletedDate: null,
     settings: {
       sound: true,
       music: true,
@@ -188,7 +186,7 @@
         STATE.unlockedLevel = typeof data.unlockedLevel === 'number' ? data.unlockedLevel : 1;
         STATE.levelStars = data.levelStars || {};
         STATE.levelBestMoves = data.levelBestMoves || {};
-        STATE.dailyCompletedDate = data.dailyCompletedDate || null;
+
         if (data.settings) {
           STATE.settings = { ...STATE.settings, ...data.settings };
         }
@@ -206,7 +204,6 @@
         unlockedLevel: STATE.unlockedLevel,
         levelStars: STATE.levelStars,
         levelBestMoves: STATE.levelBestMoves,
-        dailyCompletedDate: STATE.dailyCompletedDate,
         settings: STATE.settings,
         tutorialSeen: STATE.tutorialSeen
       };
@@ -236,7 +233,7 @@
     if (coinEl) coinEl.textContent = STATE.coins;
     if (levelEl) {
       if (STATE.screen === 'PLAYING') {
-        levelEl.textContent = STATE.isDaily ? 'Daily' : `Lvl ${STATE.currentLevelNum}`;
+        levelEl.textContent = `Lvl ${STATE.currentLevelNum}`;
       } else {
         levelEl.textContent = `Lvl ${STATE.unlockedLevel}`;
       }
@@ -258,7 +255,7 @@
     const gameLevelEl = document.getElementById('level-display');
     const gameCoinsEl = document.getElementById('game-coins-val');
     if (gameLevelEl) {
-      gameLevelEl.textContent = STATE.isDaily ? 'DAILY' : String(STATE.currentLevelNum).padStart(2, '0');
+      gameLevelEl.textContent = String(STATE.currentLevelNum).padStart(2, '0');
     }
     if (gameCoinsEl) {
       gameCoinsEl.textContent = STATE.coins;
@@ -308,16 +305,9 @@
     return { blocked: false };
   }
 
-  function loadLevel(levelNum, isDaily = false) {
-    STATE.isDaily = isDaily;
+  function loadLevel(levelNum) {
     STATE.currentLevelNum = levelNum;
-
-    if (isDaily) {
-      const today = new Date().toISOString().slice(0, 10);
-      STATE.activeLevelData = getDailyChallengeData(today);
-    } else {
-      STATE.activeLevelData = getLevelData(levelNum);
-    }
+    STATE.activeLevelData = getLevelData(levelNum);
 
     // Deep copy initial active arrows
     STATE.activeArrows = JSON.parse(JSON.stringify(STATE.activeLevelData.arrows));
@@ -609,31 +599,26 @@
       stars = 2;
     }
 
-    // Coins reward
+    // Base Coins reward
     let coinsEarned = 15;
     if (stars === 3) coinsEarned += 10;
     if (stars === 2) coinsEarned += 5;
-    if (STATE.isDaily) coinsEarned += 25;
+
+    // Save Stars & Unlocks
+    const lvlNum = STATE.currentLevelNum;
+    const prevStars = STATE.levelStars[lvlNum] || 0;
+    if (stars > prevStars) {
+      STATE.levelStars[lvlNum] = stars;
+    }
+    const prevBest = STATE.levelBestMoves[lvlNum];
+    if (!prevBest || STATE.moveCount < prevBest) {
+      STATE.levelBestMoves[lvlNum] = STATE.moveCount;
+    }
+    if (lvlNum === STATE.unlockedLevel && lvlNum < 100) {
+      STATE.unlockedLevel = lvlNum + 1;
+    }
 
     STATE.coins += coinsEarned;
-
-    if (STATE.isDaily) {
-      STATE.dailyCompletedDate = new Date().toISOString().slice(0, 10);
-    } else {
-      // Save Stars & Unlocks
-      const lvlNum = STATE.currentLevelNum;
-      const prevStars = STATE.levelStars[lvlNum] || 0;
-      if (stars > prevStars) {
-        STATE.levelStars[lvlNum] = stars;
-      }
-      const prevBest = STATE.levelBestMoves[lvlNum];
-      if (!prevBest || STATE.moveCount < prevBest) {
-        STATE.levelBestMoves[lvlNum] = STATE.moveCount;
-      }
-      if (lvlNum === STATE.unlockedLevel && lvlNum < 100) {
-        STATE.unlockedLevel = lvlNum + 1;
-      }
-    }
 
     saveProgress();
     updateHeaderUI();
@@ -652,10 +637,10 @@
     const coinsEl = document.getElementById('victory-coins');
 
     if (titleEl) {
-      titleEl.textContent = STATE.isDaily ? 'Daily Challenge Cleared!' : `Level ${STATE.currentLevelNum} Cleared!`;
+      titleEl.textContent = `Level ${STATE.currentLevelNum} Cleared!`;
     }
     if (movesEl) movesEl.textContent = STATE.moveCount;
-    if (bestEl) bestEl.textContent = STATE.isDaily ? STATE.moveCount : (STATE.levelBestMoves[STATE.currentLevelNum] || STATE.moveCount);
+    if (bestEl) bestEl.textContent = STATE.levelBestMoves[STATE.currentLevelNum] || STATE.moveCount;
     if (coinsEl) coinsEl.textContent = `+${coinsEarned}`;
 
     // Animate stars
@@ -669,6 +654,16 @@
         }, 200 + idx * 220);
       }
     });
+
+    const nextBtn = document.getElementById('btn-next-level');
+    if (nextBtn) {
+      const btnSpan = nextBtn.querySelector('span') || nextBtn;
+      if (STATE.currentLevelNum < 100) {
+        btnSpan.textContent = 'NEXT LEVEL';
+      } else {
+        btnSpan.textContent = 'LEVEL SELECT';
+      }
+    }
 
     modal.classList.add('active');
   }
@@ -901,8 +896,11 @@
           localStorage.removeItem(STORAGE_KEY);
           STATE.unlockedLevel = 1;
           STATE.stars = 0;
-          STATE.coins = 50;
+          STATE.coins = 100;
           STATE.levelStars = {};
+          STATE.levelBestMoves = {};
+          STATE.dailyProgress = {};
+          STATE.dailyStreak = 0;
           STATE.dailyCompletedDate = null;
           STATE.tutorialSeen = false;
           saveProgress();
@@ -1036,11 +1034,7 @@
     // Header buttons
     document.getElementById('btn-header-back')?.addEventListener('click', () => {
       playSound('click');
-      if (STATE.screen === 'PLAYING' || STATE.screen === 'LEVEL_SELECT') {
-        setScreen('HOME');
-      } else {
-        setScreen('HOME');
-      }
+      setScreen('HOME');
     });
 
     document.getElementById('btn-header-settings')?.addEventListener('click', () => {
@@ -1051,22 +1045,12 @@
     // Home buttons
     document.getElementById('btn-home-play')?.addEventListener('click', () => {
       playSound('click');
-      loadLevel(STATE.unlockedLevel, false);
+      loadLevel(STATE.unlockedLevel);
     });
 
     document.getElementById('btn-home-levels')?.addEventListener('click', () => {
       playSound('click');
       setScreen('LEVEL_SELECT');
-    });
-
-    document.getElementById('btn-home-daily')?.addEventListener('click', () => {
-      playSound('click');
-      const today = new Date().toISOString().slice(0, 10);
-      if (STATE.dailyCompletedDate === today) {
-        showToast('You already completed today\'s Daily Challenge! Come back tomorrow.', '🗓️');
-      } else {
-        loadLevel(1, true);
-      }
     });
 
     // Playing Control buttons
@@ -1078,10 +1062,8 @@
     document.getElementById('btn-next-level')?.addEventListener('click', () => {
       playSound('click');
       hideVictoryModal();
-      if (STATE.isDaily) {
-        setScreen('HOME');
-      } else if (STATE.currentLevelNum < 100) {
-        loadLevel(STATE.currentLevelNum + 1, false);
+      if (STATE.currentLevelNum < 100) {
+        loadLevel(STATE.currentLevelNum + 1);
       } else {
         setScreen('LEVEL_SELECT');
       }
@@ -1090,7 +1072,7 @@
     document.getElementById('btn-replay-level')?.addEventListener('click', () => {
       playSound('click');
       hideVictoryModal();
-      loadLevel(STATE.currentLevelNum, STATE.isDaily);
+      loadLevel(STATE.currentLevelNum);
     });
 
     document.getElementById('btn-victory-levels')?.addEventListener('click', () => {

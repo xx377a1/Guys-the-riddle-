@@ -202,19 +202,3 @@ function getLevelData(levelNum) {
   const safeLevel = Math.max(1, Math.min(100, parseInt(levelNum, 10) || 1));
   return generateDeterministicLevel(safeLevel);
 }
-
-/**
- * Generates Daily Challenge puzzle based on date string (YYYY-MM-DD)
- */
-function getDailyChallengeData(dateStr) {
-  let hash = 0;
-  for (let i = 0; i < dateStr.length; i++) {
-    hash = (hash << 5) - hash + dateStr.charCodeAt(i);
-    hash |= 0;
-  }
-  const seed = Math.abs(hash) % 90 + 10; // Level 10-100 equivalent difficulty
-  const baseLevel = generateDeterministicLevel(seed);
-  baseLevel.isDaily = true;
-  baseLevel.dateStr = dateStr;
-  return baseLevel;
-}
