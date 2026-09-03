@@ -228,6 +228,11 @@
   }
 
   function updateHeaderUI() {
+    const backBtn = document.getElementById('btn-header-back');
+    if (backBtn) {
+      backBtn.style.display = (STATE.screen === 'HOME') ? 'none' : 'flex';
+    }
+
     const coinEl = document.getElementById('badge-coin-val');
     const levelEl = document.getElementById('badge-level-val');
     if (coinEl) coinEl.textContent = STATE.coins;
@@ -803,6 +808,7 @@
   function showCustomConfirm(options) {
     return new Promise((resolve) => {
       const modal = document.getElementById('modal-confirm');
+      const iconEl = document.getElementById('modal-confirm-icon');
       const titleEl = document.getElementById('modal-confirm-title');
       const msgEl = document.getElementById('modal-confirm-message');
       const okBtn = document.getElementById('modal-confirm-ok');
@@ -813,9 +819,13 @@
         return;
       }
 
-      if (titleEl) titleEl.textContent = options.title || 'Are you sure?';
+      if (iconEl) iconEl.textContent = options.icon || '⚠️';
+      if (titleEl) {
+        titleEl.textContent = options.title || 'Are you sure?';
+        titleEl.style.color = options.confirmStyle === 'danger' ? '#f87171' : '#38bdf8';
+      }
       if (msgEl) msgEl.textContent = options.message || '';
-      if (okBtn) okBtn.textContent = options.confirmText || 'Confirm';
+      if (okBtn) okBtn.textContent = options.confirmText || 'Yes';
       if (cancelBtn) cancelBtn.textContent = options.cancelText || 'Cancel';
 
       if (options.confirmStyle === 'danger') {
@@ -996,7 +1006,7 @@
             highlightKeyboardSelected(STATE.activeArrows[0]);
           }
         } else if (key === 'escape') {
-          setScreen('HOME');
+          document.getElementById('btn-header-back')?.click();
         }
       } else if (e.key === 'Escape') {
         hideVictoryModal();
@@ -1032,9 +1042,23 @@
     }, { once: true });
 
     // Header buttons
-    document.getElementById('btn-header-back')?.addEventListener('click', () => {
+    document.getElementById('btn-header-back')?.addEventListener('click', async () => {
       playSound('click');
-      setScreen('HOME');
+      if (STATE.screen === 'PLAYING') {
+        const confirmed = await showCustomConfirm({
+          icon: '🚪',
+          title: 'Exit Game?',
+          message: 'Are you sure you want to exit to the main menu?',
+          confirmText: 'Yes',
+          cancelText: 'Cancel',
+          confirmStyle: 'danger'
+        });
+        if (confirmed) {
+          setScreen('HOME');
+        }
+      } else {
+        setScreen('HOME');
+      }
     });
 
     document.getElementById('btn-header-settings')?.addEventListener('click', () => {
