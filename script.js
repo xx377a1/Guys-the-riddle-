@@ -1,3 +1,6 @@
+import { getLevelData } from './levels.js';
+import './style.css';
+
 /**
  * Arrow Flow Puzzle - Main Game Script
  * Fully self-contained logic for rendering, path validation, audio synthesis,
@@ -36,60 +39,88 @@
   let bgMusicGain = null;
 
   function initAudio() {
-    if (!audioCtx) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (AudioContextClass) {
-        audioCtx = new AudioContextClass();
+    try {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass();
+        }
       }
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        // Silent 1-sample kickstart buffer for iOS Safari and mobile Chrome audio unlocking
+        const buffer = audioCtx.createBuffer(1, 1, 22050);
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.start(0);
+      }
+    } catch (e) {
+      console.warn("Audio Context init warning:", e);
     }
-    if (audioCtx && audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+    return audioCtx;
+  }
+
+  // Auto-unlock Web Audio context on user gesture for mobile and modern browser compliance
+  if (typeof window !== 'undefined') {
+    const unlockAudio = () => {
+      initAudio();
+    };
+    ['pointerdown', 'click', 'touchstart', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, unlockAudio, { passive: true });
+    });
   }
 
   function playSound(type) {
-    if (!STATE.settings.sound || !audioCtx) return;
-    initAudio();
+    if (!STATE.settings.sound) return;
+    const ctx = initAudio();
+    if (!ctx) return;
 
-    const now = audioCtx.currentTime;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
 
     try {
+      const now = ctx.currentTime;
+
       if (type === 'click') {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(600, now);
         osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.08);
 
       } else if (type === 'move') {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(300, now);
         osc.frequency.exponentialRampToValueAtTime(900, now + 0.2);
         gain.gain.setValueAtTime(0.35, now);
         gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.22);
 
       } else if (type === 'blocked') {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(140, now);
         osc.frequency.setValueAtTime(100, now + 0.08);
         gain.gain.setValueAtTime(0.3, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.18);
 
@@ -99,14 +130,14 @@
 
       } else if (type === 'hint') {
         [523.25, 659.25, 783.99].forEach((freq, idx) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, now + idx * 0.08);
           gain.gain.setValueAtTime(0.2, now + idx * 0.08);
           gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.08 + 0.25);
           osc.connect(gain);
-          gain.connect(audioCtx.destination);
+          gain.connect(ctx.destination);
           osc.start(now + idx * 0.08);
           osc.stop(now + idx * 0.08 + 0.25);
         });
@@ -114,14 +145,14 @@
       } else if (type === 'victory') {
         const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
         notes.forEach((freq, idx) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
           osc.type = 'triangle';
           osc.frequency.setValueAtTime(freq, now + idx * 0.1);
           gain.gain.setValueAtTime(0.35, now + idx * 0.1);
           gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.1 + 0.4);
           osc.connect(gain);
-          gain.connect(audioCtx.destination);
+          gain.connect(ctx.destination);
           osc.start(now + idx * 0.1);
           osc.stop(now + idx * 0.1 + 0.4);
         });

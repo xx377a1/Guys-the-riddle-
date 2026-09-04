@@ -202,3 +202,12 @@ function getLevelData(levelNum) {
   const safeLevel = Math.max(1, Math.min(100, parseInt(levelNum, 10) || 1));
   return generateDeterministicLevel(safeLevel);
 }
+
+// Bind to window object for production web hosting and bundling compatibility
+if (typeof window !== 'undefined') {
+  window.getLevelData = getLevelData;
+  window.generateDeterministicLevel = generateDeterministicLevel;
+  window.HANDCRAFTED_LEVELS = HANDCRAFTED_LEVELS;
+}
+
+export { HANDCRAFTED_LEVELS, generateDeterministicLevel, getLevelData };
