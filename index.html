@@ -86,6 +86,14 @@
           </svg>
           <span>LEVEL SELECT</span>
         </button>
+        <div style="display:flex; gap:10px; width:100%; margin-top:8px;">
+          <button id="btn-y8-leaderboard" class="btn-secondary" style="flex:1; font-size:0.85rem; padding:10px 12px; gap:6px;">
+            <span>🏆 Y8 LEADERBOARD</span>
+          </button>
+          <button id="btn-y8-reward-home" class="btn-primary" style="flex:1; font-size:0.85rem; padding:10px 12px; gap:6px; background: linear-gradient(135deg, #10b981, #059669); border-color: #10b981;">
+            <span>🎬 FREE +50 🪙</span>
+          </button>
+        </div>
       </div>
 
       <!-- Home Stats Summary -->
@@ -205,6 +213,9 @@
           <button id="btn-next-level" class="btn-primary btn-sky-full">
             <span>NEXT LEVEL</span>
           </button>
+          <button id="btn-y8-reward-win" class="btn-primary" style="background: linear-gradient(135deg, #f59e0b, #d97706); border-color: #f59e0b; margin-top: -2px;">
+            <span>🎬 WATCH AD FOR 2X COINS (+25 🪙)</span>
+          </button>
           <div style="display:flex; gap:10px; width:100%;">
             <button id="btn-replay-level" class="btn-secondary" style="flex:1;">REPLAY LEVEL</button>
             <button id="btn-victory-levels" class="btn-secondary" style="flex:1;">LEVELS</button>
@@ -245,6 +256,26 @@
           </div>
         </div>
 
+        <!-- Y8 SDK ACCOUNT & CLOUD SAVE -->
+        <div class="how-to-play-box glass" style="margin-top:14px; border-color: rgba(56,189,248,0.3);">
+          <strong style="color:var(--text-primary); display:block; margin-bottom:8px; font-size:0.95rem;">
+            🎮 Y8 Platform Services
+          </strong>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button id="btn-y8-login" class="btn-secondary" style="font-size:0.85rem; padding:8px 12px; justify-content:center;">
+              👤 Connect Y8 Account / Sign In
+            </button>
+            <div style="display:flex; gap:8px;">
+              <button id="btn-y8-cloud-save" class="btn-secondary" style="flex:1; font-size:0.8rem; padding:8px 10px;">
+                ☁️ Save to Y8 Cloud
+              </button>
+              <button id="btn-y8-cloud-load" class="btn-secondary" style="flex:1; font-size:0.8rem; padding:8px 10px;">
+                📥 Load from Y8 Cloud
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="how-to-play-box glass">
           <strong style="color:var(--text-primary); display:block; margin-bottom:6px;">How to Play:</strong>
           • Tap an arrow pointing to a clear edge to remove it.<br>
@@ -270,6 +301,29 @@
         <div style="display: flex; gap: 10px; width: 100%;">
           <button id="modal-confirm-cancel" class="btn-secondary" style="flex: 1;">Cancel</button>
           <button id="modal-confirm-ok" class="btn-primary" style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626); border-color: #ef4444;">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: Y8 LEADERBOARD -->
+    <div id="modal-y8-leaderboard" class="modal-overlay">
+      <div class="modal-card" style="max-width: 440px; width: 92%;">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:12px;">
+          <h2 style="font-size:1.3rem; font-weight:800; font-style:italic;" class="text-sky-400">🏆 Y8 LEADERBOARD</h2>
+          <button class="btn-close-modal header-btn" aria-label="Close leaderboard">✕</button>
+        </div>
+
+        <div id="y8-leaderboard-content" style="width:100%; min-height:180px; max-height:280px; overflow-y:auto; font-size:0.9rem;">
+          <p style="text-align:center; color:var(--text-secondary); margin-top:30px;">Loading Y8 high scores...</p>
+        </div>
+
+        <div style="margin-top:14px; width:100%; display:flex; gap:10px;">
+          <button id="btn-y8-submit-score" class="btn-primary" style="flex:1; font-size:0.85rem;">
+            SUBMIT MY SCORE
+          </button>
+          <button class="btn-close-modal btn-secondary" style="flex:1; font-size:0.85rem;">
+            CLOSE
+          </button>
         </div>
       </div>
     </div>

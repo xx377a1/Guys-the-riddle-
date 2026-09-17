@@ -1,4 +1,0 @@
-This is a Brave Creators publisher verification file.
-
-Domain: arrowflownet.netlify.app
-Token: ef1451465a6ac58a51d48c0c73d31380c1cc6301519532949d14f2d458a3d962

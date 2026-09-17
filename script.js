@@ -1,4 +1,5 @@
 import { getLevelData } from './levels.js';
+import { y8SDK, Y8_CONFIG } from './y8-sdk.js';
 import './style.css';
 
 /**
@@ -659,6 +660,38 @@ import './style.css';
     saveProgress();
     updateHeaderUI();
 
+    // ==================== Y8 SDK AUTOMATIC INTEGRATION ====================
+    // Submit total score (Total Stars * 100 + Unlocked Level * 50) to Y8 Leaderboards
+    const totalStars = Object.values(STATE.levelStars).reduce((acc, curr) => acc + curr, 0);
+    const totalScore = (totalStars * 100) + (STATE.unlockedLevel * 50);
+    y8SDK.submitScore(totalScore);
+
+    // Y8 Achievements Check
+    if (lvlNum === 1) {
+      y8SDK.unlockAchievement('first_clear');
+    }
+    if (totalStars >= 10) {
+      y8SDK.unlockAchievement('stars_10');
+    }
+    if (STATE.unlockedLevel >= 10) {
+      y8SDK.unlockAchievement('level_10');
+    }
+    if (STATE.unlockedLevel >= 50) {
+      y8SDK.unlockAchievement('level_50');
+    }
+    if (lvlNum === 100) {
+      y8SDK.unlockAchievement('level_100');
+    }
+
+    // Auto-sync progress to Y8 Cloud Storage
+    y8SDK.cloudSave({
+      coins: STATE.coins,
+      unlockedLevel: STATE.unlockedLevel,
+      levelStars: STATE.levelStars,
+      levelBestMoves: STATE.levelBestMoves,
+      settings: STATE.settings
+    });
+
     // Render Victory Modal
     setTimeout(() => {
       showVictoryModal(stars, coinsEarned);
@@ -1184,6 +1217,196 @@ import './style.css';
 
     // Set initial screen
     setScreen('HOME');
+    bindY8UIEvents();
+  }
+
+  // ==================== Y8 SDK EVENT BINDINGS & UI ====================
+  function bindY8UIEvents() {
+    // Initialize Y8 SDK on boot
+    y8SDK.init().then(success => {
+      if (success) {
+        console.log("Y8 SDK active!");
+      } else {
+        console.log("Y8 SDK operating in offline/local fallback mode.");
+      }
+    });
+
+    // Home Screen Leaderboard button
+    document.getElementById('btn-y8-leaderboard')?.addEventListener('click', () => {
+      playSound('click');
+      openY8LeaderboardModal();
+    });
+
+    // Home Screen Rewarded Ad button
+    document.getElementById('btn-y8-reward-home')?.addEventListener('click', () => {
+      playSound('click');
+      showToast('Loading Y8 rewarded ad...', '🎬');
+
+      y8SDK.showRewardedAd(
+        () => {
+          if (STATE.settings.music && bgMusicGain) {
+            bgMusicGain.gain.setValueAtTime(0.001, audioCtx ? audioCtx.currentTime : 0);
+          }
+        },
+        () => {
+          STATE.coins += 50;
+          saveProgress();
+          updateHeaderUI();
+          playSound('victory');
+          showToast('Rewarded Ad complete! Granted +50 Coins! 🪙', '🎉');
+          if (STATE.settings.music) updateMusicState();
+        },
+        () => {
+          showToast('Rewarded ad unavailable or skipped.', '⚠️');
+          if (STATE.settings.music) updateMusicState();
+        }
+      );
+    });
+
+    // Victory Modal Rewarded Ad button
+    document.getElementById('btn-y8-reward-win')?.addEventListener('click', () => {
+      playSound('click');
+      showToast('Loading Y8 rewarded ad...', '🎬');
+
+      y8SDK.showRewardedAd(
+        () => {
+          if (STATE.settings.music && bgMusicGain) {
+            bgMusicGain.gain.setValueAtTime(0.001, audioCtx ? audioCtx.currentTime : 0);
+          }
+        },
+        () => {
+          STATE.coins += 25;
+          saveProgress();
+          updateHeaderUI();
+          playSound('victory');
+          showToast('Double Reward! Granted +25 Coins! 🪙', '🎉');
+          const btn = document.getElementById('btn-y8-reward-win');
+          if (btn) btn.style.display = 'none';
+          if (STATE.settings.music) updateMusicState();
+        },
+        () => {
+          showToast('Rewarded ad unavailable or closed early.', '⚠️');
+          if (STATE.settings.music) updateMusicState();
+        }
+      );
+    });
+
+    // Settings Y8 Account / Login button
+    document.getElementById('btn-y8-login')?.addEventListener('click', () => {
+      playSound('click');
+      y8SDK.login((res) => {
+        if (res && res.status === 'connected') {
+          showToast('Successfully connected to Y8 Account!', '👤');
+        } else {
+          showToast('Y8 Login closed or unavailable.', 'ℹ️');
+        }
+      });
+    });
+
+    // Settings Cloud Save button
+    document.getElementById('btn-y8-cloud-save')?.addEventListener('click', () => {
+      playSound('click');
+      showToast('Saving progress to Y8 Cloud...', '☁️');
+      y8SDK.cloudSave({
+        coins: STATE.coins,
+        unlockedLevel: STATE.unlockedLevel,
+        levelStars: STATE.levelStars,
+        levelBestMoves: STATE.levelBestMoves,
+        settings: STATE.settings
+      }, (res) => {
+        if (res && res.status === 'ok') {
+          showToast('Progress saved to Y8 Cloud!', '✅');
+        } else {
+          showToast('Saved locally. Connect Y8 Account for cloud sync.', 'ℹ️');
+        }
+      });
+    });
+
+    // Settings Cloud Load button
+    document.getElementById('btn-y8-cloud-load')?.addEventListener('click', () => {
+      playSound('click');
+      showToast('Fetching save data from Y8 Cloud...', '📥');
+      y8SDK.cloudLoad((data) => {
+        if (data && typeof data === 'object') {
+          if (typeof data.coins === 'number') STATE.coins = data.coins;
+          if (typeof data.unlockedLevel === 'number') STATE.unlockedLevel = data.unlockedLevel;
+          if (data.levelStars) STATE.levelStars = data.levelStars;
+          if (data.levelBestMoves) STATE.levelBestMoves = data.levelBestMoves;
+          if (data.settings) STATE.settings = { ...STATE.settings, ...data.settings };
+          saveProgress();
+          updateHeaderUI();
+          renderLevelSelectGrid();
+          showToast('Progress loaded from Y8 Cloud!', '🎉');
+        } else {
+          showToast('No Y8 Cloud save found for current player.', 'ℹ️');
+        }
+      });
+    });
+
+    // Submit score button inside Y8 Leaderboard modal
+    document.getElementById('btn-y8-submit-score')?.addEventListener('click', () => {
+      playSound('click');
+      const totalStars = Object.values(STATE.levelStars).reduce((acc, curr) => acc + curr, 0);
+      const totalScore = (totalStars * 100) + (STATE.unlockedLevel * 50);
+      showToast(`Submitting score: ${totalScore}...`, '🏆');
+      y8SDK.submitScore(totalScore, () => {
+        showToast('Score submitted to Y8 Leaderboard!', '✅');
+        openY8LeaderboardModal();
+      });
+    });
+  }
+
+  function openY8LeaderboardModal() {
+    const modal = document.getElementById('modal-y8-leaderboard');
+    const content = document.getElementById('y8-leaderboard-content');
+    if (!modal || !content) return;
+
+    modal.classList.add('active');
+    content.innerHTML = `<p style="text-align:center; color:var(--text-secondary); margin-top:30px;">Loading Y8 High Scores...</p>`;
+
+    const totalStars = Object.values(STATE.levelStars).reduce((acc, curr) => acc + curr, 0);
+    const myScore = (totalStars * 100) + (STATE.unlockedLevel * 50);
+
+    y8SDK.fetchLeaderboard((response) => {
+      let scoresList = [];
+
+      if (response && Array.isArray(response)) {
+        scoresList = response;
+      } else if (response && response.items && Array.isArray(response.items)) {
+        scoresList = response.items;
+      }
+
+      if (scoresList.length === 0) {
+        content.innerHTML = `
+          <div style="padding:12px; background:rgba(255,255,255,0.05); border-radius:12px; margin-bottom:12px; text-align:center;">
+            <p style="font-weight:700; color:#38bdf8; margin-bottom:4px;">YOUR CURRENT SCORE</p>
+            <p style="font-size:1.6rem; font-weight:900; color:#f59e0b;">${myScore} pts</p>
+            <p style="font-size:0.8rem; color:var(--text-secondary);">Stars: ${totalStars} · Max Level: ${STATE.unlockedLevel}</p>
+          </div>
+          <p style="text-align:center; font-size:0.85rem; color:var(--text-secondary); padding:10px;">
+            Y8 Leaderboard ready. Submit your score to compete globally!
+          </p>
+        `;
+      } else {
+        let html = `
+          <div style="display:flex; justify-content:space-between; font-weight:700; font-size:0.8rem; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; margin-bottom:8px;">
+            <span># PLAYER</span>
+            <span>SCORE</span>
+          </div>
+        `;
+        scoresList.forEach((item, index) => {
+          const playerName = item.player_name || item.name || `Player ${index + 1}`;
+          const score = item.score || 0;
+          html += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-weight:700;">${index + 1}. ${playerName}</span>
+              <span style="font-weight:800; color:#38bdf8;">${score}</span>
+            </div>
+          `;
+        });
+        content.innerHTML = html;
+      }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', initApp);
